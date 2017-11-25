@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.http.HttpServer;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
@@ -45,6 +46,28 @@ public class Penny extends AbstractVerticle {
           .encodePrettily());
       
     });
+    
+        /* 🚑 */
+    HealthCheckHandler healthCheckHandler = HealthCheckHandler.create(vertx);
+  
+    healthCheckHandler.register("how_are_you", future ->
+      discovery.getRecord(r -> r.getRegistration().equals(record.getRegistration()), ar -> {
+        if(ar.succeeded()) {
+          future.complete();
+        } else {
+          System.out.println("😡 not in a good shape");
+          ar.cause().printStackTrace();
+          future.fail(ar.cause());
+        }
+      })
+    );
+    
+    /* 🚑 */
+    router.get("/health").handler(healthCheckHandler);
+    /* 👋 */
+    router.get("/health/"+record.getRegistration()).handler(healthCheckHandler);
+    
+    
     
     /* serve static assets, see /resources/webroot directory */
     router.route("/*").handler(StaticHandler.create());
